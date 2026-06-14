@@ -1,0 +1,30 @@
+{
+  "name": "sky-take-out-uniapp",
+  "version": "1.0.0",
+  "description": "苍穹外卖",
+  "main": "main.js",
+  "scripts": {
+    "dev:mp-weixin": "cross-env NODE_ENV=development UNI_PLATFORM=mp-weixin vue-cli-service uni-build --watch",
+    "build:mp-weixin": "cross-env NODE_ENV=production UNI_PLATFORM=mp-weixin vue-cli-service uni-build"
+  },
+  "dependencies": {
+    "@dcloudio/uni-mp-weixin": "^2.0.0",
+    "@dcloudio/uni-ui": "^1.4.0",
+    "vue": "^2.6.14",
+    "vuex": "^3.6.2",
+    "regenerator-runtime": "^0.13.9"
+  },
+  "devDependencies": {
+    "@dcloudio/uni-cli-shared": "^2.0.0",
+    "@dcloudio/vue-cli-plugin-uni": "^2.0.0",
+    "@dcloudio/webpack-uni-mp-loader": "^2.0.0",
+    "cross-env": "^7.0.3",
+    "sass": "^1.49.0",
+    "sass-loader": "^10.2.0",
+    "vue-template-compiler": "^2.6.14"
+  },
+  "browserslist": [
+    "Android >= 4.4",
+    "ios >= 9"
+  ]
+}
