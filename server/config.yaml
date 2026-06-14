@@ -1,0 +1,37 @@
+server:
+  port: 8080
+  mode: debug  # debug | release | test
+
+database:
+  host: 127.0.0.1
+  port: 3306
+  user: root
+  password: OneAPI@justsong
+  dbname: sky_take_out
+  charset: utf8mb4
+  max_idle_conns: 10
+  max_open_conns: 100
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  admin_secret: admin-secret-key
+  admin_ttl: 7200  # seconds (2 hours)
+  admin_token_name: token
+  user_secret: user-secret-key
+  user_ttl: 604800   # seconds (7 days)
+  user_token_name: authentication
+
+oss:
+  endpoint: oss-cn-hangzhou.aliyuncs.com
+  access_key_id: ""
+  access_key_secret: ""
+  bucket_name: ""
+
+wechat:
+  appid: ""
+  secret: ""
