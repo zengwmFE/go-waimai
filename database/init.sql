@@ -214,3 +214,20 @@ CREATE TABLE `order_detail` (
   `amount`      DECIMAL(10,2)  NOT NULL COMMENT '单价',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单明细表';
+
+-- =============================================
+-- 骑手表
+-- =============================================
+CREATE TABLE IF NOT EXISTS rider (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(32) NOT NULL,
+    phone VARCHAR(11) NOT NULL UNIQUE,
+    status INT NOT NULL DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO rider (name, phone) VALUES
+('骑手张三', '13800000001'),
+('骑手李四', '13800000002'),
+('骑手王五', '13800000003'),
+('骑手赵六', '13800000004'),
+('骑手陈七', '13800000005');

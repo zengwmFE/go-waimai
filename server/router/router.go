@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"sky-take-out-go/controller/admin"
+	"sky-take-out-go/controller/rider"
 	"sky-take-out-go/controller/user"
 	"sky-take-out-go/middleware"
 	"sky-take-out-go/websocket"
@@ -135,6 +136,21 @@ func Setup() *gin.Engine {
 	}
 	// static
 	r.Static("/uploads", "./uploads")
+
+	// rider API routes
+	ri := r.Group("/rider")
+	ri.POST("/login", rider.Login)
+	ri.Use(middleware.AdminAuth())
+	{
+		ri.GET("/orders/pending", rider.PendingOrders)
+		ri.GET("/orders/grab", rider.GrabOrder)
+		ri.GET("/orders/my", rider.MyOrders)
+		ri.GET("/orders/complete", rider.CompleteOrder)
+	}
+
+	// rider static pages
+	r.GET("/rider/login.html", func(c *gin.Context) { c.File("../rider/login.html") })
+	r.GET("/rider/orders.html", func(c *gin.Context) { c.File("../rider/orders.html") })
 
 	// websocket
 	r.GET("/ws/:sid", func(c *gin.Context) {

@@ -25,6 +25,7 @@ type Orders struct {
 	DeliveryStatus        int        `gorm:"column:delivery_status;not null;default:1" json:"deliveryStatus"`
 	DeliveryTime          *time.Time `gorm:"column:delivery_time" json:"deliveryTime"`
 	PackAmount            int        `gorm:"column:pack_amount;default:0" json:"packAmount"`
+	RiderID               *uint64       `gorm:"column:rider_id" json:"riderId"`
 	TablewareNumber       int           `gorm:"column:tableware_number;default:0" json:"tablewareNumber"`
 	TablewareStatus       int           `gorm:"column:tableware_status;not null;default:1" json:"tablewareStatus"`
 	OrderDetails          []OrderDetail `gorm:"foreignKey:OrderID" json:"orderDetails"`

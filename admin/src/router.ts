@@ -26,6 +26,16 @@ const router = new Router({
   base: process.env.BASE_URL,
   routes: [
     {
+      path: "/rider/login",
+      component: () => import("@/views/rider/login.vue"),
+      meta: { title: "骑手登录" }
+    },
+    {
+      path: "/rider/orders",
+      component: () => import("@/views/rider/orders.vue"),
+      meta: { title: "骑手抢单" }
+    },
+    {
       path: "/login",
       component: () =>
         import(/* webpackChunkName: "login" */ "@/views/login/index.vue"),

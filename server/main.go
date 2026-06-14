@@ -7,6 +7,7 @@ import (
 	"sky-take-out-go/config"
 	"sky-take-out-go/dao"
 	"sky-take-out-go/router"
+	"sky-take-out-go/utils"
 
 	"go.uber.org/zap"
 	"gorm.io/driver/mysql"
@@ -27,6 +28,8 @@ func main() {
 	}
 	dao.DB = db
 	dao.InitRedis(config.Cfg.Redis)
+	utils.InitRmq()
+	defer utils.CloseConnect()
 
 	r := router.Setup()
 
