@@ -19,37 +19,37 @@ func failOnError(err error, msg string) {
 
 func InitRmq() {
 	// 建立连接
-	rbmqconnect, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	var err error
+	rbmqconnect, err = amqp.Dial("amqp://guest:guest@localhost:5672/")
 
 	failOnError(err, "Failed to connect to RabbitMQ")
 	// 打开频道
-	rbmqchann, err := rbmqconnect.Channel()
+	rbmqchann, err = rbmqconnect.Channel()
 	failOnError(err, "Failed to open a channel")
 	err = rbmqchann.ExchangeDeclare(
 		"order.dispatch", // name
 		"fanout",         // type
-		false,            // durability
+		true,             // durability
 		false,            // auto-deleted
 		false,            // internal
 		false,            // no-wait
 		nil,              // arguments
 	)
 	failOnError(err, "Failed to declare a exchange")
-	defer rbmqchann.Close()
 }
 
-func Send(data []byte) error {
+func Send(exchange string, orderIdBytes []byte) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	err := rbmqchann.PublishWithContext(ctx,
-		"order.dispatch", // exchange
-		"",               // routing key
-		false,            // mandatory
-		false,            // immediate
+		exchange, // exchange
+		"",       // routing key
+		false,    // mandatory
+		false,    // immediate
 		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte("12"),
+			ContentType: "application/json",
+			Body:        orderIdBytes,
 		})
 	if err != nil {
 		return err
@@ -62,5 +62,10 @@ func Recevie() {
 }
 
 func CloseConnect() {
-	defer rbmqconnect.Close()
+	if rbmqchann != nil {
+		rbmqchann.Close()
+	}
+	if rbmqconnect != nil {
+		rbmqconnect.Close()
+	}
 }

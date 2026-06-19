@@ -87,6 +87,7 @@ export default class extends Vue {
   // 获取今日订单
   async getOrderStatisticsData() {
     const data = await getOrderData()
+    console.log(data, "data=====")
     this.orderviewData = data.data.data
   }
   // 获取菜品总览数据

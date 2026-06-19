@@ -17,3 +17,8 @@ type SetmealVO struct {
 	Status        int             `json:"status"`
 	SetmealDishes []SetmealDishVO `json:"setmealDishes"`
 }
+
+type SetmealOverView struct {
+	Sold         int `json:"sold"`
+	Discontinued int `json:"discontinued"`
+}

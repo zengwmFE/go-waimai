@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -869,17 +870,65 @@ func ConfirmOrder(c *gin.Context) {
 	}
 	// userID := middleware.GetUserID(c)
 	orderDao := dao.NewOrderDAO()
-	result, err := orderDao.ConfirmOrder(req.ID)
-	if err != nil {
-		utils.Error(c, "订单操作失败")
+	if err := orderDao.ConfirmOrder(req.ID); err != nil {
+		utils.Error(c, err.Error())
 		return
 	}
-	utils.Success(c, result)
+	msg, _ := json.Marshal(gin.H{
+		"orderId":   req.ID,
+		"eventName": "new_order",
+	})
+	utils.Send("order.dispatch", msg)
+	utils.Success(c, nil)
 }
-func RejectOrder(c *gin.Context)   { utils.Error(c, "not implemented") }
-func CancelOrder(c *gin.Context)   { utils.Error(c, "not implemented") }
-func DeliveryOrder(c *gin.Context) { utils.Error(c, "not implemented") }
-func CompleteOrder(c *gin.Context) { utils.Error(c, "not implemented") }
+func RejectOrder(c *gin.Context) {
+	var req dto.OrderRejectionDTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.Error(c, "参数错误")
+		return
+	}
+	if err := dao.NewOrderDAO().RejectOrder(req.ID, req.RejectionReason); err != nil {
+		utils.Error(c, err.Error())
+		return
+	}
+	utils.Success(c, nil)
+}
+func CancelOrder(c *gin.Context) {
+	var req dto.OrderCancelDTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.Error(c, "参数错误")
+		return
+	}
+	if err := dao.NewOrderDAO().CancelOrder(req.ID, req.CancelReason); err != nil {
+		utils.Error(c, err.Error())
+		return
+	}
+	utils.Success(c, nil)
+}
+func DeliveryOrder(c *gin.Context) {
+	var req dto.OrderConfirmDTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.Error(c, "参数错误")
+		return
+	}
+	if err := dao.NewOrderDAO().DeliveryOrder(req.ID); err != nil {
+		utils.Error(c, err.Error())
+		return
+	}
+	utils.Success(c, nil)
+}
+func CompleteOrder(c *gin.Context) {
+	var req dto.OrderConfirmDTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.Error(c, "参数错误")
+		return
+	}
+	if err := dao.NewOrderDAO().CompleteOrder(req.ID); err != nil {
+		utils.Error(c, err.Error())
+		return
+	}
+	utils.Success(c, nil)
+}
 
 // Shop
 func GetShopStatus(c *gin.Context) {
@@ -940,7 +989,44 @@ func Top10(c *gin.Context)              { utils.Error(c, "not implemented") }
 func Export(c *gin.Context)             { utils.Error(c, "not implemented") }
 
 // Workspace
-func BusinessData(c *gin.Context)     { utils.Error(c, "not implemented") }
-func OverviewOrders(c *gin.Context)   { utils.Error(c, "not implemented") }
-func OverviewDishes(c *gin.Context)   { utils.Error(c, "not implemented") }
-func OverviewSetmeals(c *gin.Context) { utils.Error(c, "not implemented") }
+func BusinessData(c *gin.Context) {
+	data, err := dao.NewOrderDAO().BusinessData()
+	if err != nil {
+		utils.Error(c, "查询失败")
+		return
+	}
+	utils.Success(c, data)
+}
+func OverviewOrders(c *gin.Context) {
+	// 查询所有状态的Order
+	var overviewDao = dao.NewOrderDAO()
+	orderList, err := overviewDao.GetAllOrder()
+	if err != nil {
+		utils.Error(c, "查询失败")
+		return
+	}
+
+	utils.Success(c, utils.FilterMap(orderList))
+
+}
+func OverviewDishes(c *gin.Context) {
+	var overviewDao = dao.NewDishDAO()
+	dishList, err := overviewDao.FindAllDishByALl()
+	if err != nil {
+		utils.Error(c, "查询失败")
+		return
+	}
+	fmt.Printf("Dish count: " + strconv.Itoa(len(*dishList)))
+
+	utils.Success(c, utils.FilterMapDish(*dishList))
+}
+func OverviewSetmeals(c *gin.Context) {
+	var overviewDao = dao.NewSetmealDAO()
+	setmealList, err := overviewDao.FindAllSetmealByALl()
+	if err != nil {
+		utils.Error(c, "查询失败")
+		return
+	}
+
+	utils.Success(c, utils.FilterMapSetmeal(setmealList))
+}

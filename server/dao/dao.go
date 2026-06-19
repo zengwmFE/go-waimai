@@ -272,6 +272,16 @@ func (dao *DishDAO) FindAllDish(dishQuery *dto.DishPageQueryDTO) (*[]entity.Dish
 	return &dish, total, nil
 }
 
+func (dao *DishDAO) FindAllDishByALl() (*[]entity.Dish, error) {
+	var dish []entity.Dish
+	db := dao.db.Model(&dish)
+	result := db.Find(&dish)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &dish, nil
+}
+
 func (dao *DishDAO) AddDish(dishJSON *dto.DishAddDTO) (*entity.Dish, error) {
 	flavors := make([]entity.DishFlavor, len(dishJSON.Flavors))
 	for i, f := range dishJSON.Flavors {
@@ -415,6 +425,16 @@ func (dao *SetmealDAO) FindAllSetmeal(setmeal *dto.SetmealPageQueryDTO) ([]entit
 		return nil, 0, result.Error
 	}
 	return setsealEntity, total, nil
+}
+
+func (dao *SetmealDAO) FindAllSetmealByALl() ([]entity.Setmeal, error) {
+	var setsealEntity []entity.Setmeal
+	db := dao.db.Model(&setsealEntity).Preload("SetmealDishes")
+	result := db.Find(&setsealEntity)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return setsealEntity, nil
 }
 
 func (dao *SetmealDAO) DeleteSetmealByIds(ids []uint64) error {
@@ -621,14 +641,137 @@ func (dao *OrderDAO) PayOrder(userID uint64, orderNumber string, payMethod int) 
 
 // confirm_order
 
-func (dao *OrderDAO) ConfirmOrder(id uint64) (uint64, error) {
+func (dao *OrderDAO) ConfirmOrder(id uint64) error {
 	result := dao.db.Model(&entity.Orders{}).
-		Where(`id=?`, id).Updates(map[string]any{
-		"status": utils.OrderStatusAccepted,
-	})
+		Where("id = ? AND status = ?", id, utils.OrderStatusPendingAccept).
+		Update("status", utils.OrderStatusAccepted)
 	if result.Error != nil {
-		return id, result.Error
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("订单状态异常，无法接单")
+	}
+	return nil
+}
+
+func (dao *OrderDAO) RejectOrder(id uint64, reason string) error {
+	result := dao.db.Model(&entity.Orders{}).
+		Where("id = ? AND status = ?", id, utils.OrderStatusPendingAccept).
+		Updates(map[string]any{
+			"status":           utils.OrderStatusCancelled,
+			"rejection_reason": reason,
+			"cancel_time":      time.Now(),
+		})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("订单状态异常")
+	}
+	return nil
+}
+
+func (dao *OrderDAO) CancelOrder(id uint64, reason string) error {
+	result := dao.db.Model(&entity.Orders{}).
+		Where("id = ? AND status IN ?", id, []int{utils.OrderStatusPendingPay, utils.OrderStatusPendingAccept}).
+		Updates(map[string]any{
+			"status":        utils.OrderStatusCancelled,
+			"cancel_reason": reason,
+			"cancel_time":   time.Now(),
+		})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("订单状态异常，无法取消")
+	}
+	return nil
+}
+
+func (dao *OrderDAO) DeliveryOrder(id uint64) error {
+	result := dao.db.Model(&entity.Orders{}).
+		Where("id = ? AND status = ?", id, utils.OrderStatusAccepted).
+		Update("status", utils.OrderStatusDelivering)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("订单状态异常")
+	}
+	return nil
+}
+
+func (dao *OrderDAO) CompleteOrder(id uint64) error {
+	result := dao.db.Model(&entity.Orders{}).
+		Where("id = ? AND status = ?", id, utils.OrderStatusDelivering).
+		Updates(map[string]any{
+			"status":        utils.OrderStatusCompleted,
+			"delivery_time": time.Now(),
+		})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("订单状态异常")
+	}
+	return nil
+}
+
+func (dao *OrderDAO) GetAllOrder() ([]entity.Orders, error) {
+	var orderList []entity.Orders
+
+	err := dao.db.Find(&orderList).Error
+	if err != nil {
+		return nil, err
+	}
+	return orderList, nil
+}
+
+// 今日营业数据
+func (dao *OrderDAO) BusinessData() (map[string]any, error) {
+	type row struct {
+		Turnover    float64
+		OrderCount  int64
+		CancelCount int64
+		Completed   int64
+	}
+	var r row
+
+	// 今日已完成订单统计
+	dao.db.Model(&entity.Orders{}).
+		Select("COALESCE(SUM(amount),0) AS turnover, COUNT(*) AS order_count").
+		Where("DATE(order_time) = CURDATE() AND status IN ?", []int{utils.OrderStatusCompleted, utils.OrderStatusDelivering}).
+		Scan(&r)
+
+	// 取消订单数
+	dao.db.Model(&entity.Orders{}).
+		Where("DATE(order_time) = CURDATE() AND status = ?", utils.OrderStatusCancelled).
+		Count(&r.CancelCount)
+
+	// 完成订单数
+	dao.db.Model(&entity.Orders{}).
+		Where("DATE(order_time) = CURDATE() AND status = ?", utils.OrderStatusCompleted).
+		Count(&r.Completed)
+
+	// 新增用户
+	var newUsers int64
+	dao.db.Model(&entity.User{}).Where("DATE(create_time) = CURDATE()").Count(&newUsers)
+
+	total := r.OrderCount + r.CancelCount
+	var completionRate float64
+	var unitPrice float64
+	if total > 0 {
+		completionRate = float64(r.Completed) / float64(total)
+	}
+	if r.OrderCount > 0 {
+		unitPrice = r.Turnover / float64(r.OrderCount)
 	}
 
-	return id, nil
+	return map[string]any{
+		"turnover":             r.Turnover,
+		"validOrderCount":      r.OrderCount,
+		"orderCompletionRate":  completionRate,
+		"unitPrice":            unitPrice,
+		"newUsers":             newUsers,
+	}, nil
 }
